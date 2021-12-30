@@ -1,0 +1,127 @@
+use crate::{RelationOp, ArithmeticOp, Expression, UnaryOp, Member, Atom};
+use std::rc::Rc;
+
+grammar;
+
+match {
+    // Skip whitespace and comments
+   r"\s*" => { },
+   r"//[^\n\r]*[\n\r]*" => { },
+} else {
+   _
+}
+
+pub Expression: Expression = {
+    <left:Expression> <op:ArithmeticOp> <right:Member> => Expression::Arithmetic(left.into(), op, right.into()),
+    <left:Expression> <op:RelationOp> <right:Member> => Expression::Relation(left.into(), op, right.into()),
+    <condition:Expression> "?" <left:Member> ":" <right:Primary> => Expression::Ternary(condition.into(), left.into(), right.into()),
+    <left:Expression> "||" <right:Member> => Expression::Or(left.into(), right.into()),
+    <left:Expression> "&&" <right:Member> => Expression::And(left.into(), right.into()),
+    <op:UnaryOp> <right:Member> => Expression::Unary(op, right.into()),
+
+    Member,
+};
+
+pub Member: Expression = {
+    <left:Member> "." <identifier:Ident> => Expression::Member(left.into(), Member::Attribute(identifier.into()).into()).into(),
+    <left:Member> "." <identifier:Ident> "(" <arguments:CommaSeparated<Expression>> ")" => {
+            let inner = Expression::Member(left.into(), Member::Attribute(identifier.into()).into()).into();
+            Expression::Member(inner, Member::FunctionCall(arguments).into()).into()
+    },
+    <left:Member> "[" <expression:Expression> "]" => Expression::Member(left.into(), Member::Index(expression.into()).into()).into(),
+    <left:Member> "{" <fields:CommaSeparated<FieldInits>> "}" => Expression::Member(left.into(), Member::Fields(fields.into()).into()).into(),
+    Primary,
+}
+
+pub Primary: Expression = {
+    "."? <Ident> => Expression::Ident(<>.into()).into(),
+    "."? <identifier:Ident> "(" <arguments:CommaSeparated<Expression>> ")" => {
+            let inner = Expression::Ident(identifier.into()).into();
+            Expression::Member(inner, Member::FunctionCall(arguments).into()).into()
+    },
+    Atom => Expression::Atom(<>).into(),
+    "[" <members:CommaSeparated<Expression>> "]" => Expression::List(<>).into(),
+    "{" <fields:CommaSeparated<MapInits>> "}" => Expression::Map(<>).into(),
+    "(" <Expression> ")"
+}
+
+pub FieldInits: (Rc<String>, Expression) = {
+    <Ident> ":" <Expression>
+}
+
+pub MapInits: (Expression, Expression) = {
+    <Expression> ":" <Expression>
+}
+
+CommaSeparated<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
+
+ArithmeticOp: ArithmeticOp = { // (3)
+    "+" => ArithmeticOp::Add,
+    "-" => ArithmeticOp::Subtract,
+    "*" => ArithmeticOp::Multiply,
+    "/" => ArithmeticOp::Divide,
+    "%" => ArithmeticOp::Modulus,
+};
+
+UnaryOp: UnaryOp = {
+    "!" => UnaryOp::Not,
+    "!!" => UnaryOp::DoubleNot,
+    "-" => UnaryOp::Minus,
+    "--" => UnaryOp::DoubleMinus,
+}
+
+RelationOp: RelationOp = {
+    "<" => RelationOp::LessThan,
+    "<=" => RelationOp::LessThanEq,
+    ">" => RelationOp::GreaterThan,
+    ">=" => RelationOp::GreaterThanEq,
+    "==" => RelationOp::Equals,
+    "!=" => RelationOp::NotEquals,
+    "in" => RelationOp::In
+}
+
+Atom: Atom = {
+    // Integer literals. Annoying to parse :/
+    r"-?[0-9]+" => Atom::Int(<>.parse().unwrap()),
+    r"-?0[xX]([0-9a-fA-F]+)" => Atom::Int(i64::from_str_radix(<>, 16).unwrap()),
+    r"-?[0-9]+ [uU]" => Atom::UInt(<>.parse().unwrap()),
+    r"-?0[xX]([0-9a-fA-F]+) [uU]" => Atom::UInt(u64::from_str_radix(<>, 16).unwrap()),
+
+    // Float with decimals and optional exponent
+    r"([-+]?[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?)" => Atom::Float(<>.parse().unwrap()),
+    // Float with no decimals and required exponent
+    r"[-+]?[0-9]+[eE][-+]?[0-9]+" => Atom::Float(<>.parse().unwrap()),
+
+    // Double quoted string
+    r#""(\\.|[^"\n])*""# => Atom::String(<>.to_string().into()),
+    r#""""(\\.|[^"{3}])*""""# => Atom::String(<>.to_string().into()),
+
+    // Single quoted string
+    r#"'(\\.|[^'\n])*'"# => Atom::String(<>.to_string().into()),
+    r#"'''(\\.|[^'{3}])*'''"# => Atom::String(<>.to_string().into()),
+
+    // Double quoted bytes
+    r#"[bB]"(\\.|[^"\n])*""# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
+    r#"[bB]"""(\\.|[^"{3}])*""""# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
+
+    // Single quoted bytes
+    r#"[bB]'(\\.|[^'\n])*'"# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
+    r#"[bB]'''(\\.|[^'{3}])*'''"# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
+
+    "true" => Atom::Bool(true),
+    "false" => Atom::Bool(false),
+    "null" => Atom::Null,
+};
+
+Ident: Rc<String> = {
+    r"[_a-zA-Z][_a-zA-Z0-9]*" => <>.to_string().into()
+}
