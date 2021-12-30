@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEL</title>
+    <script src="https://jspm.dev/@spectrum-web-components/theme/theme-light.js" type="module" async></script>
+    <script src="https://jspm.dev/@spectrum-web-components/theme/scale-medium.js" type="module" async></script>
+    <script src="https://jspm.dev/@spectrum-web-components/theme/sp-theme.js" type="module" async></script>
+    <script src="https://jspm.dev/@spectrum-web-components/button/sp-button.js" type="module" async></script>
+    <script src="https://jspm.dev/@spectrum-web-components/help-text/sp-help-text.js" type="module" async></script>
+    <script src="https://jspm.dev/@spectrum-web-components/card/sp-card.js" type="module" async></script>
+    <script type="module" src="https://cdn.jsdelivr.net/gh/vanillawc/wc-codemirror@1/index.js"></script>
+    <script type="module">
+        import init, { execute } from "/pkg/web.js";
+        await init();
+
+        const editor = document.querySelector("wc-codemirror");
+ 
+        requestAnimationFrame(() => editor.setValue("5 == -5" + "\n".repeat(8)))
+        
+        const card = document.querySelector("sp-card");
+
+        window.run = function() {
+            const r = execute(editor.value);
+            card.subheading = `Result is: ${r}`;
+            console.log("here");
+        }
+    </script>
+    <style>
+        body,
+        html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+        }
+
+        body, sp-theme {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-flow: column;
+            gap: 50px;
+        }
+
+        wc-codemirror {
+            min-height: 100px;
+            width: min(500px, 100vw);
+        }
+        h1 {
+            font-size: 4rem;
+            letter-spacing: 19px;
+            color: #9c9c9c;
+        }
+    </style>
+</head>
+
+<body>
+    <sp-theme color="light" scale="medium">
+        <h1>CEL</h1>
+        <sp-card subheading="Result is: false">
+            <wc-codemirror slot="preview" mode="javascript"></wc-codemirror>
+        </sp-card>
+        <!-- <sp-help-text size="m"></sp-help-text> -->
+        <sp-button onclick="window.run()">Run</sp-button>
+    </sp-theme>
+</body>
+
+</html>
