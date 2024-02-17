@@ -19,14 +19,18 @@
 
         const editor = document.querySelector("wc-codemirror");
  
-        requestAnimationFrame(() => editor.setValue("5 == -5" + "\n".repeat(8)))
+        requestAnimationFrame(() => editor.setValue("(2000 / 2 == 1000) - 2 == 998"))
         
         const card = document.querySelector("sp-card");
 
         window.run = function() {
-            const r = execute(editor.value);
-            card.subheading = `Result is: ${r}`;
-            console.log("here");
+            try {
+                const r = execute(editor.value);
+                card.subheading = `Result is: ${r}`;
+            } catch (e) {
+                card.subheading = `Failed to evaluate: ${e.message}`
+            }
+       
         }
     </script>
     <style>
