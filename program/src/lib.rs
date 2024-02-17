@@ -3,3 +3,4 @@ pub mod program;
 pub use crate::program::Program;
 pub use crate::context::Context;
 mod value;
+mod eval;

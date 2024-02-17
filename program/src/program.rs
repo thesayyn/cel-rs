@@ -1,11 +1,10 @@
-use parser::{Expression};
+use parser::Expression;
 use parser::parser::ExpressionParser;
-
 use std::fmt;
-
 use std::result::Result;
 use crate::context::Context;
 use crate::value::Value;
+use crate::eval::Eval;
 
 pub struct Program {
     expr: Expression
@@ -31,8 +30,9 @@ impl Program {
         }
     }
 
-    pub fn execute(&self, context: Context) -> bool {
-        match Value::from(&self.expr) {
+    pub fn execute(self, context: Context) -> bool {
+        let e = Eval::new(context);
+        match e.eval(self.expr) {
             Value::Bool(b) => b,
             _ => panic!("this was not supposed to happen!")
         }
@@ -45,7 +45,8 @@ fn basic_test() {
     let true_cases = [
         "6 == 6", 
         "6 + 12 == 18", 
-        "(6 - 12) == -6"
+        "(6 - 12) == -6",
+        "(2000 / 2) - 2 == 998"
     ];
     for case in true_cases {
         assert!(Program::new(case).expect("failed to compile").execute(Context::default()));

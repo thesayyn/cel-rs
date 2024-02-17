@@ -1,4 +1,3 @@
-use parser::{ArithmeticOp, Atom, Expression, RelationOp};
 use std::rc::Rc;
 
 #[derive(PartialEq)]
@@ -12,43 +11,38 @@ pub enum Value {
     String(Rc<String>),
 }
 
-impl From<&Atom> for Value {
-    fn from(atom: &Atom) -> Self {
-        match atom {
-            Atom::Int(i) => Value::Int(*i),
-            Atom::UInt(ui) => Value::UInt(*ui),
-            Atom::Float(f) => Value::Float(*f),
-            Atom::Bool(b) => Value::Bool(*b),
-            Atom::Bytes(b) => Value::Bytes(b.clone()),
-            Atom::Null => Value::Null,
-            Atom::String(s) => Value::String(s.clone()),
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Int(v) => write!(f, "int({})", v),
+            Value::UInt(v) => write!(f, "uint({})", v),
+            Value::Float(v) => write!(f, "float({})", v),
+            Value::Null => write!(f, "null"),
+            Self::Bool(v) => write!(f, "bool({})", v),
+            Value::Bytes(v) => write!(f, "bytes(len = {})", v.len()),
+            Value::String(v) => write!(f, "string({})", v),
         }
     }
 }
 
-impl<'a> Value {
-    pub fn from(expr: &'a Expression) -> Value {
-        match expr {
-            Expression::Atom(atom) => atom.into(),
-            Expression::Relation(left, op, right) => {
-                let left = Value::from(left);
-                let right = Value::from(right);
-                let result = match op {
-                    RelationOp::Equals => left.eq(&right),
-                    _ => unimplemented!(),
-                };
-                Value::Bool(result)
-            }
-            Expression::Arithmetic(left, op, right) => {
-                let left = Value::from(left);
-                let right = Value::from(right);
-                match op {
-                    ArithmeticOp::Add => left + right,
-                    ArithmeticOp::Subtract => left - right,
-                    _ => todo!(),
-                }
-            }
-            _ => todo!(),
+impl std::ops::Mul for Value {
+    type Output = Value;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Value::Int(l), Value::Int(r)) => Value::Int(l * r),
+            (a, b) => todo!("mul {} {}", a, b),
+        }
+    }
+}
+
+impl std::ops::Div for Value {
+    type Output = Value;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Value::Int(l), Value::Int(r)) => Value::Int(l / r),
+            (a, b) => todo!("div {} {}", a, b),
         }
     }
 }
@@ -59,7 +53,7 @@ impl std::ops::Add<Value> for Value {
     fn add(self, o: Value) -> Self::Output {
         match (self, o) {
             (Value::Int(l), Value::Int(r)) => Value::Int(l + r),
-            _ => todo!("add"),
+            (a, b) => todo!("add {} {}", a, b),
         }
     }
 }
@@ -69,7 +63,7 @@ impl std::ops::Sub<Value> for Value {
     fn sub(self, o: Value) -> Self::Output {
         match (self, o) {
             (Value::Int(l), Value::Int(r)) => Value::Int(l - r),
-            _ => todo!("sub"),
+            (a, b) => todo!("sub {} {}", a, b),
         }
     }
 }

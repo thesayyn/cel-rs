@@ -9,14 +9,26 @@ extern "C" {
     fn log(message: String);
 }
 
-#[wasm_bindgen]
-pub fn execute(source: &str) -> bool {
-    log(format!("parsing {}", source));
+fn eval(source: &str) -> bool {
     match Program::new(source) {
         Ok(p) => p.execute(Context::default()),
         Err(err) => {
-            error(format!("parse error {}", err));
+            error(format!("cel-rs: parse error {}", err));
             false
         },
+    }
+}
+
+
+#[wasm_bindgen]
+pub fn execute(source: &str) -> Result<bool, JsError> {
+    log(format!("cel-rs: parsing {}", source));
+    let res = std::panic::catch_unwind(|| eval(source));
+    match res {
+        Ok(b) => Ok(b),
+        Err(e) => {
+            log(format!("{:?}", e));
+            Err(JsError::new(format!("{:?}", e).as_str()))
+        } 
     }
 }
