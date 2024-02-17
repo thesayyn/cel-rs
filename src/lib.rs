@@ -26,6 +26,9 @@ pub fn execute(source: &str) -> Result<bool, JsError> {
     let res = std::panic::catch_unwind(|| eval(source));
     match res {
         Ok(b) => Ok(b),
-        Err(e) => Err(JsError::new(format!("{:?}", e).as_str()))
+        Err(e) => {
+            log(format!("{:?}", e));
+            Err(JsError::new(format!("{:?}", e).as_str()))
+        } 
     }
 }
