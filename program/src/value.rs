@@ -1,14 +1,57 @@
-use std::rc::Rc;
+use std::{hash::Hash, rc::Rc};
+use ordered_float::OrderedFloat;
+use ordered_hash_map::OrderedHashMap;
+use parser::Atom;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum Value {
-    Int(i64),
+    Int(i64),   
     UInt(u64),
-    Float(f64),
+    // We need to use a wrapper for floats for Eq, Hash
+    Float(OrderedFloat<f64>),
     Null,
     Bool(bool),
     Bytes(Rc<Vec<u8>>),
     String(Rc<String>),
+    Map(Rc<OrderedHashMap<Value, Value>>)
+}
+
+
+impl Into<bool> for Value {
+    fn into(self) -> bool {
+        match self {
+            Value::Int(v) => v != 0,
+            Value::UInt(v) => v != 0,
+            Value::Float(v) => v != 0.0,
+            Value::Null => false,
+            Value::Bool(v) => v,
+            Value::Bytes(v) => v.len() > 0,
+            Value::String(v) => v.len() > 0,
+            Value::Map(v) => v.len() > 0,
+        }
+    }
+}
+
+
+impl Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // TODO: this is not right. hash each arm separately.
+        core::mem::discriminant(self).hash(state);
+    }
+}
+
+impl From<Atom> for Value {
+    fn from(atom: Atom) -> Self {
+        match atom {
+            Atom::Int(i) => Value::Int(i),
+            Atom::UInt(ui) => Value::UInt(ui),
+            Atom::Float(f) => Value::Float(f.into()),
+            Atom::Bool(b) => Value::Bool(b),
+            Atom::Null => Value::Null,
+            Atom::Bytes(b) => Value::Bytes(b),
+            Atom::String(s) => Value::String(s),
+        }
+    }
 }
 
 impl std::fmt::Display for Value {
@@ -18,9 +61,10 @@ impl std::fmt::Display for Value {
             Value::UInt(v) => write!(f, "uint({})", v),
             Value::Float(v) => write!(f, "float({})", v),
             Value::Null => write!(f, "null"),
-            Self::Bool(v) => write!(f, "bool({})", v),
+            Value::Bool(v) => write!(f, "bool({})", v),
             Value::Bytes(v) => write!(f, "bytes(len = {})", v.len()),
             Value::String(v) => write!(f, "string({})", v),
+            Value::Map(v) => write!(f, "map(len = {})", v.len()),
         }
     }
 }

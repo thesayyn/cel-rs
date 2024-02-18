@@ -3,8 +3,7 @@ use parser::parser::ExpressionParser;
 use std::fmt;
 use std::result::Result;
 use crate::context::Context;
-use crate::value::Value;
-use crate::eval::Eval;
+use crate::eval::{Bag, Eval};
 
 pub struct Program {
     expr: Expression
@@ -31,11 +30,12 @@ impl Program {
     }
 
     pub fn execute(self, context: Context) -> bool {
+        self.eval(context).unpack().into()
+    }
+
+    pub fn eval(self, context: Context) -> impl Bag {
         let e = Eval::new(context);
-        match e.eval(self.expr) {
-            Value::Bool(b) => b,
-            _ => panic!("this was not supposed to happen!")
-        }
+        e.eval(self.expr).unpack()
     }
 }
 

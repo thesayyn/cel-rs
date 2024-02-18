@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 parser = {path = "../parser"}
+ordered-float = "4.2.0"
+ordered_hash_map = "0.4.0"
