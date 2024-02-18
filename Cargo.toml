@@ -1,2 +1,3 @@
 [workspace]
-members = ["parser", "program", "web"]
+members = ["parser", "program", "web", "cel_spec"]
+resolver = "1"

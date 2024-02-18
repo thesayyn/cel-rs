@@ -1,0 +1,17 @@
+[package]
+name = "cel_spec"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+prost = "0.12"
+prost-types = "0.12"
+prost-reflect = { version =  "0.13.0", features = ["text-format"]}
+quote = "1.0.35"
+program = { path = "../program" }
+
+[build_dependencies]
+prost-build = "0.12.3"

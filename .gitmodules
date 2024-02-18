@@ -1,0 +1,6 @@
+[submodule "conformance_tests/cel-spec"]
+	path = conformance_tests/cel-spec
+	url = git@github.com:google/cel-spec.git
+[submodule "conformance_tests/googleapis"]
+	path = conformance_tests/googleapis
+	url = git@github.com:googleapis/googleapis.git
