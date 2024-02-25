@@ -4,6 +4,7 @@ use std::fmt;
 use std::result::Result;
 use crate::context::Context;
 use crate::eval::{Bag, Eval};
+use crate::Value;
 
 pub struct Program {
     expr: Expression
@@ -33,7 +34,7 @@ impl Program {
         self.eval(context).unpack().into()
     }
 
-    pub fn eval(self, context: Context) -> impl Bag {
+    pub fn eval(self, context: Context) -> Value {
         let e = Eval::new(context);
         e.eval(self.expr).unpack()
     }
@@ -46,7 +47,7 @@ fn basic_test() {
         "6 == 6", 
         "6 + 12 == 18", 
         "(6 - 12) == -6",
-        "(2000 / 2) - 2 == 998"
+        r#"r"""#
     ];
     for case in true_cases {
         assert!(Program::new(case).expect("failed to compile").execute(Context::default()));

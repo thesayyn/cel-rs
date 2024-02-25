@@ -89,12 +89,14 @@ RelationOp: RelationOp = {
     "in" => RelationOp::In
 }
 
+
 Atom: Atom = {
-    // Integer literals. Annoying to parse :/
+    // Integer literals
     r"-?[0-9]+" => Atom::Int(<>.parse().unwrap()),
     r"-?0[xX]([0-9a-fA-F]+)" => Atom::Int(i64::from_str_radix(<>, 16).unwrap()),
-    r"-?[0-9]+ [uU]" => Atom::UInt(<>.parse().unwrap()),
-    r"-?0[xX]([0-9a-fA-F]+) [uU]" => Atom::UInt(u64::from_str_radix(<>, 16).unwrap()),
+    // LALRPOP does not support regex capture groups. https://github.com/lalrpop/lalrpop/issues/575
+    r"-?[0-9]+[uU]" => Atom::UInt(<>.trim_end_matches(|c| c == 'u' || c == 'U').parse().unwrap()),
+    r"-?0[xX]([0-9a-fA-F]+)[uU]" => Atom::UInt(u64::from_str_radix(<>.trim_end_matches(|c| c == 'u' || c == 'U'), 16).unwrap()),
 
     // Float with decimals and optional exponent
     r"([-+]?[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?)" => Atom::Float(<>.parse().unwrap()),
@@ -102,24 +104,26 @@ Atom: Atom = {
     r"[-+]?[0-9]+[eE][-+]?[0-9]+" => Atom::Float(<>.parse().unwrap()),
 
     // Double quoted string
-    r#""(\\.|[^"\n])*""# => Atom::String(<>.to_string().into()),
-    r#""""(\\.|[^"{3}])*""""# => Atom::String(<>.to_string().into()),
+    "r"? <s:r#""(\\.|[^"\n])*""#> => Atom::String(Rc::new(s[1..s.len()-1].into())),
+    "r"? <s:r#""""(\\.|[^"{3}])*""""#> => Atom::String(Rc::new(s[3..s.len()-3].into())),
 
     // Single quoted string
-    r#"'(\\.|[^'\n])*'"# => Atom::String(<>.to_string().into()),
-    r#"'''(\\.|[^'{3}])*'''"# => Atom::String(<>.to_string().into()),
+    "r"? <s:r#"'(\\.|[^'\n])*'"#> => Atom::String(Rc::new(s[1..s.len()-1].into())),
+    "r"? <s:r#"'''(\\.|[^'{3}])*'''"#> => Atom::String(Rc::new(s[3..s.len()-3].into())),
+
 
     // Double quoted bytes
-    r#"[bB]"(\\.|[^"\n])*""# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
-    r#"[bB]"""(\\.|[^"{3}])*""""# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
+    r#"[bB]"(\\.|[^"\n])*""# => Atom::Bytes(Vec::from(<>[2..<>.len()-1].as_bytes()).into()),
+    r#"[bB]"""(\\.|[^"{3}])*""""# => Atom::Bytes(Vec::from(<>[4..<>.len()-3].as_bytes()).into()),
 
     // Single quoted bytes
-    r#"[bB]'(\\.|[^'\n])*'"# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
-    r#"[bB]'''(\\.|[^'{3}])*'''"# => Atom::Bytes(Vec::from(<>.as_bytes()).into()),
+    r#"[bB]'(\\.|[^'\n])*'"# =>Atom::Bytes(Vec::from(<>[2..<>.len()-1].as_bytes()).into()),
+    r#"[bB]'''(\\.|[^'{3}])*'''"# => Atom::Bytes(Vec::from(<>[4..<>.len()-3].as_bytes()).into()),
 
     "true" => Atom::Bool(true),
     "false" => Atom::Bool(false),
     "null" => Atom::Null,
+    
 };
 
 Ident: Rc<String> = {

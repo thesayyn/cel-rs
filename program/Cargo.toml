@@ -9,4 +9,6 @@ edition = "2021"
 parser = {path = "../parser"}
 ordered-float = "4.2.0"
 ordered_hash_map = "0.4.0"
-prost-reflect = "0.13.0"
+
+[dev_dependencies]
+cel_spec = {path = "../cel_spec"}

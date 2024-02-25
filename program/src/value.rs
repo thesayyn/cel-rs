@@ -3,7 +3,7 @@ use ordered_float::OrderedFloat;
 use ordered_hash_map::OrderedHashMap;
 use parser::Atom;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Value {
     Int(i64),   
     UInt(u64),
