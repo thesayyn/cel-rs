@@ -11,6 +11,7 @@ fn get_expected_value(value: &prost_reflect::DynamicMessage) -> String {
         "uint64_value" => ("UInt(", format!("{}", field.1.as_u64().unwrap()), ")"),
         "double_value" => ("Float(", format!("{}.into()", field.1.as_f64().unwrap()), ")"),
         "map_value" => ("Map(", String::from("ordered_hash_map::OrderedHashMap::new().into()"), ")"),
+        "list_value" => ("List(", String::from("Vec::new().into()"), ")" ),
         "bytes_value" => ("Bytes(std::rc::Rc::new(Vec::from(", format!("{:?}", field.1.as_bytes().unwrap().to_vec()), ")))"),
         _ => ("Null", String::new(), "")
     };
@@ -74,6 +75,6 @@ pub fn suite(attr: TokenStream) -> TokenStream {
         ast.push_str("}");
         break;
     }
-    println!("{}", ast);
+    //println!("{}", ast);
     ast.parse().unwrap()
 }

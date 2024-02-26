@@ -19,6 +19,7 @@ impl Bag for Value {
 }
 
 pub struct Eval {
+    #[allow(dead_code)]
     ctx: Context,
 }
 
@@ -49,10 +50,18 @@ impl Eval {
         for (kexpr, vexpr) in entries {
             let k = self.eval(kexpr).unpack();
             let v = self.eval(vexpr).unpack();
-            println!("k: {}, v: {}", &k, &v);
             map.insert(k, v);
         }
         Value::Map(Rc::new(map))
+    }
+
+    fn eval_list(&self, elems: Vec<Expression>) -> Value {
+        let mut list = Vec::with_capacity(elems.len());
+        for expr in elems {
+            let v = self.eval(expr).unpack();
+            list.push(v);
+        }
+        Value::List(Rc::new(list))
     }
 
     pub fn eval(&self, expr: Expression) -> impl Bag {
@@ -88,7 +97,7 @@ impl Eval {
             Expression::And(_, _) => todo!(),
             Expression::Unary(_, _) => todo!(),
             Expression::Member(expr, member) => self.eval_member(*expr, *member).unpack(),
-            Expression::List(_) => todo!(),
+            Expression::List(elems) => self.eval_list(elems),
             Expression::Map(entries) => self.eval_map(entries),
             Expression::Ident(r) => Value::String(r),
         }

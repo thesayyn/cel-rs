@@ -13,9 +13,9 @@ pub enum Value {
     Bool(bool),
     Bytes(Rc<Vec<u8>>),
     String(Rc<String>),
-    Map(Rc<OrderedHashMap<Value, Value>>)
+    Map(Rc<OrderedHashMap<Value, Value>>),
+    List(Rc<Vec<Value>>),
 }
-
 
 impl Into<bool> for Value {
     fn into(self) -> bool {
@@ -28,6 +28,7 @@ impl Into<bool> for Value {
             Value::Bytes(v) => v.len() > 0,
             Value::String(v) => v.len() > 0,
             Value::Map(v) => v.len() > 0,
+            Value::List(v) => v.len() > 0
         }
     }
 }
@@ -65,6 +66,7 @@ impl std::fmt::Display for Value {
             Value::Bytes(v) => write!(f, "bytes(len = {})", v.len()),
             Value::String(v) => write!(f, "string({})", v),
             Value::Map(v) => write!(f, "map(len = {})", v.len()),
+            Value::List(v) => write!(f, "list(len = {})", v.len()),
         }
     }
 }

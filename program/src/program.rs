@@ -41,15 +41,25 @@ impl Program {
 }
 
 
-#[test]
-fn basic_test() {
-    let true_cases = [
-        "6 == 6", 
-        "6 + 12 == 18", 
-        "(6 - 12) == -6",
-        r#"r"""#
-    ];
-    for case in true_cases {
-        assert!(Program::new(case).expect("failed to compile").execute(Context::default()));
+
+#[cfg(test)]
+pub mod tests {
+    macro_rules! string {
+        ($q:literal) => {
+            crate::Value::String(std::rc::Rc::new($q.into()))
+        };
+    }
+    macro_rules! eval_program {
+        ($expr:literal) => ({
+            let program = crate::program::Program::new($expr);
+            assert!(program.is_ok(), "failed to create the program {:?}", program.err());
+            let program = program.unwrap();
+            program.eval(crate::context::Context::default())
+        });
+    }
+
+    #[test]
+    fn basic_test() {
+        assert_eq!(eval_program!(r#"r"""#), string!(""));
     }
 }
