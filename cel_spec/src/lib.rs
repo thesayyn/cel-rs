@@ -64,8 +64,8 @@ pub fn suite(attr: TokenStream) -> TokenStream {
                     let program = program::Program::new(r#"{expr}"#);
                     assert!(program.is_ok(), "failed to parse '{{}}'", r#"{expr}"#);
                     let program = program.unwrap();
-                    let ctx = program::context::Context::default();
-                    let value = program.eval(ctx);
+                    let mut ctx = program::context::Context::default();
+                    let value = program.eval(&mut ctx);
                     let expected_value = {expected_value};
                     assert_eq!(value, expected_value, r#""{{}}" did not match "{{}}""#, value, expected_value);
                 }}

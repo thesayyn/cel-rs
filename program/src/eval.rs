@@ -1,4 +1,5 @@
-use std::rc::Rc;
+use core::panic;
+use std::{mem, rc::Rc};
 use ordered_hash_map::OrderedHashMap;
 use parser::{ArithmeticOp, Expression, Member, RelationOp};
 use crate::{value::Value, Context};
@@ -7,69 +8,72 @@ pub trait Bag {
    fn unpack(self) -> Value;
 }
 
-/// Indexer permits random access of elements by index ```a[b()]```.
-pub trait Indexer<T> where T: Bag {
-    fn get(val: T) -> T;
-}
-
 impl Bag for Value {
     fn unpack(self) -> Value {
         self
     }  
 }
 
-pub struct Eval {
-    #[allow(dead_code)]
-    ctx: Context,
-}
+#[derive(Default)]
+pub struct Eval {}
 
 impl Eval {
-    pub fn new(ctx: Context) -> Self {
-        Eval { ctx }
-    }
 
-    fn eval_member(&self, expr: Expression, member: Member) -> impl Bag {
-        let v = self.eval(expr).unpack();
+    fn eval_member(&self, expr: Expression, member: Member, ctx: &mut Context) -> impl Bag {
+        let v = self.eval(expr.clone(), ctx).unpack();
         match member {
-            parser::Member::Attribute(_) => todo!("Attribute"),
-            parser::Member::FunctionCall(_) => todo!("FunctionCall"),
+            parser::Member::Attribute(attr) => {
+                if let Value::Map(v) = v {
+                    let value = v.get(&Value::String(attr)).expect("TODO: unknown map key");
+                    return value.to_owned()
+                }
+                if let Some(val) = ctx.resolve(&attr) {
+                    println!("{}", &attr);
+                    return  val
+                }
+                
+                panic!("unknown attribute {}", attr)
+            },
+            parser::Member::FunctionCall(args) => {
+                println!("call args = {:?}  v = {:?}, expr = {:?}", args, v, expr);
+                Value::Null
+            },
             parser::Member::Index(i) => {
-                let i = self.eval(*i).unpack();
+                let i = self.eval(*i, ctx).unpack();
                 if let Value::Map(v) = v {
                     let value = v.get(&i).expect("TODO: unknown map key");
                     return value.to_owned()
                 } 
                 Value::Null
-                
             },
             parser::Member::Fields(_) => todo!("Fields"),
         }
     }
-    fn eval_map(&self, entries: Vec<(Expression, Expression)>) -> Value {
+    fn eval_map(&self, entries: Vec<(Expression, Expression)>, ctx: &mut Context) -> Value {
         let mut map = OrderedHashMap::with_capacity(entries.len());
         for (kexpr, vexpr) in entries {
-            let k = self.eval(kexpr).unpack();
-            let v = self.eval(vexpr).unpack();
+            let k = self.eval(kexpr, ctx).unpack();
+            let v = self.eval(vexpr, ctx).unpack();
             map.insert(k, v);
         }
         Value::Map(Rc::new(map))
     }
 
-    fn eval_list(&self, elems: Vec<Expression>) -> Value {
+    fn eval_list(&self, elems: Vec<Expression>, ctx: &mut Context) -> Value {
         let mut list = Vec::with_capacity(elems.len());
         for expr in elems {
-            let v = self.eval(expr).unpack();
+            let v = self.eval(expr, ctx).unpack();
             list.push(v);
         }
         Value::List(Rc::new(list))
     }
 
-    pub fn eval(&self, expr: Expression) -> impl Bag {
+    pub fn eval(&self, expr: Expression, ctx: &mut Context) -> impl Bag {
         match expr {
             Expression::Atom(atom) => Value::from(atom),
             Expression::Relation(left, op, right) => {
-                let left = self.eval(*left).unpack();
-                let right = self.eval(*right).unpack();
+                let left = self.eval(*left, ctx).unpack();
+                let right = self.eval(*right, ctx).unpack();
                 let result = match op {
                     RelationOp::Equals => left.eq(&right),
                     RelationOp::LessThan => todo!("lt"),
@@ -82,8 +86,8 @@ impl Eval {
                 Value::Bool(result)
             }
             Expression::Arithmetic(left, op, right) => {
-                let left = self.eval(*left).unpack();
-                let right = self.eval(*right).unpack();
+                let left = self.eval(*left, ctx).unpack();
+                let right = self.eval(*right, ctx).unpack();
                 match op {
                     ArithmeticOp::Add => left + right,
                     ArithmeticOp::Subtract => left - right,
@@ -96,10 +100,16 @@ impl Eval {
             Expression::Or(_, _) => todo!(),
             Expression::And(_, _) => todo!(),
             Expression::Unary(_, _) => todo!(),
-            Expression::Member(expr, member) => self.eval_member(*expr, *member).unpack(),
-            Expression::List(elems) => self.eval_list(elems),
-            Expression::Map(entries) => self.eval_map(entries),
-            Expression::Ident(r) => Value::String(r),
+            Expression::Member(expr, member) => self.eval_member(*expr, *member, ctx).unpack(),
+            Expression::List(elems) => self.eval_list(elems, ctx),
+            Expression::Map(entries) => self.eval_map(entries, ctx),
+            Expression::Ident(r) => {
+                let val  = ctx.resolve(&r);
+                if let Some(val) = val {
+                    return val
+                }
+                panic!("unknown attribute {}", &r)
+            },
         }
     }
 }

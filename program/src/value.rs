@@ -15,6 +15,21 @@ pub enum Value {
     String(Rc<String>),
     Map(Rc<OrderedHashMap<Value, Value>>),
     List(Rc<Vec<Value>>),
+    Function(Rc<FnValue>)
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct FnValue {
+    pub name: &'static str,
+    pub overloads: &'static [Overload],
+}
+
+pub type Func = fn(lhs: &Value, rhs: &Value) -> Value;
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Overload {
+    pub key: &'static str,
+    pub func: Func
 }
 
 impl Into<bool> for Value {
@@ -28,11 +43,11 @@ impl Into<bool> for Value {
             Value::Bytes(v) => v.len() > 0,
             Value::String(v) => v.len() > 0,
             Value::Map(v) => v.len() > 0,
-            Value::List(v) => v.len() > 0
+            Value::List(v) => v.len() > 0,
+            Value::Function(_) => true,
         }
     }
 }
-
 
 impl Hash for Value {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -67,6 +82,7 @@ impl std::fmt::Display for Value {
             Value::String(v) => write!(f, "string({})", v),
             Value::Map(v) => write!(f, "map(len = {})", v.len()),
             Value::List(v) => write!(f, "list(len = {})", v.len()),
+            Value::Function(v) => write!(f, "function(name = {})", v.name),
         }
     }
 }
