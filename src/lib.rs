@@ -1,4 +1,4 @@
-use program::{Context, Program};
+use cel_rs::{Context, Program};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -11,7 +11,7 @@ extern "C" {
 
 fn eval(source: &str) -> bool {
     match Program::new(source) {
-        Ok(p) => p.execute(Context::default()),
+        Ok(p) => p.execute(&mut Context::default()),
         Err(err) => {
             error(format!("cel-rs: parse error {}", err));
             false
