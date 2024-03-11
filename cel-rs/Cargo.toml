@@ -1,7 +1,12 @@
 [package]
 name = "cel-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+description = "Common Expression Language (cel) for Rust."
+license = "MIT"
+authors = ["Sahin Yort <thesayyn@gmail.com>"]
+repository = "https://github.com/thesayyn/cel-rs"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
