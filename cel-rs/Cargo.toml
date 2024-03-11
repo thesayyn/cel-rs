@@ -1,14 +1,18 @@
 [package]
-name = "parser"
+name = "cel-rs"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-
 [dependencies]
+ordered-float = "4.2.0"
+ordered_hash_map = "0.4.0"
 regex = "1.4.2"
 lalrpop-util = "0.19.1"
+
+[dev_dependencies]
+cel-spec = {path = "../cel-spec"}
 
 [build-dependencies]
 lalrpop = { version = "0.19.1", features = ["lexer"] }

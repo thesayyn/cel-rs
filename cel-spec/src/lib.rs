@@ -15,7 +15,7 @@ fn get_expected_value(value: &prost_reflect::DynamicMessage) -> String {
         "bytes_value" => ("Bytes(std::rc::Rc::new(Vec::from(", format!("{:?}", field.1.as_bytes().unwrap().to_vec()), ")))"),
         _ => ("Null", String::new(), "")
     };
-    format!("program::value::Value::{}{}{}", m, v, c)
+    format!("cel_rs::value::Value::{}{}{}", m, v, c)
 }
 
 #[proc_macro]
@@ -61,10 +61,10 @@ pub fn suite(attr: TokenStream) -> TokenStream {
             ast.push_str(&format!(r##"
                 #[test]
                 fn {name}() {{
-                    let program = program::Program::new(r#"{expr}"#);
+                    let program = cel_rs::Program::new(r#"{expr}"#);
                     assert!(program.is_ok(), "failed to parse '{{}}'", r#"{expr}"#);
                     let program = program.unwrap();
-                    let mut ctx = program::context::Context::default();
+                    let mut ctx = cel_rs::context::Context::default();
                     let value = program.eval(&mut ctx);
                     let expected_value = {expected_value};
                     assert_eq!(value, expected_value, r#""{{}}" did not match "{{}}""#, value, expected_value);

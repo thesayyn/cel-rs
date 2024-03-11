@@ -1,5 +1,5 @@
-use parser::Expression;
-use parser::parser::ExpressionParser;
+use crate::parser::Expression;
+use crate::parser::cel::ExpressionParser;
 use std::fmt;
 use std::result::Result;
 use crate::context::Context;
@@ -44,7 +44,7 @@ impl Program {
 
 #[cfg(test)]
 pub mod tests {
-    use std::{default, rc::Rc, task::Context};
+    use std::rc::Rc;
 
     use crate::{program, value::{FnValue, Overload}, Value};
 

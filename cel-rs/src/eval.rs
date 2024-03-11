@@ -1,7 +1,7 @@
 use core::panic;
-use std::{mem, rc::Rc};
+use std::rc::Rc;
 use ordered_hash_map::OrderedHashMap;
-use parser::{ArithmeticOp, Expression, Member, RelationOp};
+use crate::parser::{ArithmeticOp, Expression, Member, RelationOp};
 use crate::{value::Value, Context};
 
 pub trait Bag {
@@ -22,7 +22,7 @@ impl Eval {
     fn eval_member(&self, expr: Expression, member: Member, ctx: &mut Context) -> impl Bag {
         let v = self.eval(expr.clone(), ctx).unpack();
         match member {
-            parser::Member::Attribute(attr) => {
+            crate::parser::Member::Attribute(attr) => {
                 if let Value::Map(v) = v {
                     let value = v.get(&Value::String(attr)).expect("TODO: unknown map key");
                     return value.to_owned()
@@ -34,11 +34,11 @@ impl Eval {
                 
                 panic!("unknown attribute {}", attr)
             },
-            parser::Member::FunctionCall(args) => {
+            crate::parser::Member::FunctionCall(args) => {
                 println!("call args = {:?}  v = {:?}, expr = {:?}", args, v, expr);
                 Value::Null
             },
-            parser::Member::Index(i) => {
+            crate::parser::Member::Index(i) => {
                 let i = self.eval(*i, ctx).unpack();
                 if let Value::Map(v) = v {
                     let value = v.get(&i).expect("TODO: unknown map key");
@@ -46,7 +46,7 @@ impl Eval {
                 } 
                 Value::Null
             },
-            parser::Member::Fields(_) => todo!("Fields"),
+            crate::parser::Member::Fields(_) => todo!("Fields"),
         }
     }
     fn eval_map(&self, entries: Vec<(Expression, Expression)>, ctx: &mut Context) -> Value {

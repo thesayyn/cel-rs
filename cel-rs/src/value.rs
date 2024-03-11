@@ -1,7 +1,7 @@
 use std::{hash::Hash, rc::Rc};
 use ordered_float::OrderedFloat;
 use ordered_hash_map::OrderedHashMap;
-use parser::Atom;
+use crate::parser::Atom;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Value {
