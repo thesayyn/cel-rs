@@ -1,20 +1,19 @@
-use crate::parser::Expression;
-use crate::parser::cel::ExpressionParser;
-use std::fmt;
-use std::result::Result;
 use crate::context::Context;
 use crate::eval::{Bag, Eval};
+use crate::parser::cel::ExpressionParser;
+use crate::parser::Expression;
 use crate::Value;
+use std::fmt;
+use std::result::Result;
 
 pub struct Program {
-    expr: Expression
+    expr: Expression,
 }
 
 #[derive(Debug)]
 pub struct ParseError {
     message: String,
 }
-
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
@@ -25,8 +24,10 @@ impl fmt::Display for ParseError {
 impl Program {
     pub fn new(source: &str) -> Result<Program, ParseError> {
         match ExpressionParser::new().parse(source) {
-            Ok(expr) => Ok(Program {expr}),
-            Err(e) => Err(ParseError{message: format!("{}", e)}),
+            Ok(expr) => Ok(Program { expr }),
+            Err(e) => Err(ParseError {
+                message: format!("{}", e),
+            }),
         }
     }
 
@@ -40,13 +41,15 @@ impl Program {
     }
 }
 
-
-
 #[cfg(test)]
 pub mod tests {
     use std::rc::Rc;
 
-    use crate::{program, value::{FnValue, Overload}, Value};
+    use crate::{
+        program,
+        value::{FnValue, Overload},
+        Value,
+    };
 
     macro_rules! string {
         ($q:literal) => {
@@ -54,15 +57,19 @@ pub mod tests {
         };
     }
     macro_rules! eval_program {
-        ($expr:literal) => ({
-           eval_program!($expr, &mut crate::context::Context::default())
-        });
-        ($expr:literal, $ctx:expr) => ({
+        ($expr:literal) => {{
+            eval_program!($expr, &mut crate::context::Context::default())
+        }};
+        ($expr:literal, $ctx:expr) => {{
             let program = crate::program::Program::new($expr);
-            assert!(program.is_ok(), "failed to create the program {:?}", program.err());
+            assert!(
+                program.is_ok(),
+                "failed to create the program {:?}",
+                program.err()
+            );
             let program = program.unwrap();
             program.eval($ctx)
-        });
+        }};
     }
 
     #[test]
@@ -70,25 +77,27 @@ pub mod tests {
         assert_eq!(eval_program!(r#"r"""#), string!(""));
     }
 
-    fn calc_string_string(lhs: &Value, rhs: &Value) -> Value {
-        Value::Null
+    fn calc_string_string(args: Vec<Value>) -> Value {
+        println!("{:?}", args);
+        let mut args = args.into_iter();
+        let a = args.next().unwrap();
+        let b = args.next().unwrap();
+        a + b
     }
 
     #[test]
     fn fn_test() {
         let func = FnValue {
             name: "calc",
-            overloads: &[
-                Overload {
-                    key: "calc_string",
-                    func: calc_string_string
-                }
-            ],
+            overloads: &[Overload {
+                key: "calc_string",
+                func: calc_string_string,
+            }],
         };
         let mut ctx = program::Context::default()
-        .add_variable("a", Value::String(Rc::new("".into())))
-        .add_variable("b", Value::Int(0))
-        .add_variable("calc", crate::Value::Function(Rc::new(func)));
-        assert_eq!(eval_program!(r#"b.calc(a)"#, &mut ctx), string!(""));
+            .add_variable("a", Value::Int(10))
+            .add_variable("b", Value::Int(10))
+            .add_variable("calc", crate::Value::Function(Rc::new(func), None));
+        assert_eq!(eval_program!(r#"b.calc(a)"#, &mut ctx), Value::Int(20));
     }
 }

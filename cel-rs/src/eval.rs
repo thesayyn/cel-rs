@@ -20,7 +20,7 @@ pub struct Eval {}
 impl Eval {
 
     fn eval_member(&self, expr: Expression, member: Member, ctx: &mut Context) -> impl Bag {
-        let v = self.eval(expr.clone(), ctx).unpack();
+        let v = self.eval(expr, ctx).unpack();
         match member {
             crate::parser::Member::Attribute(attr) => {
                 if let Value::Map(v) = v {
@@ -28,15 +28,30 @@ impl Eval {
                     return value.to_owned()
                 }
                 if let Some(val) = ctx.resolve(&attr) {
-                    println!("{}", &attr);
+                    if let Value::Function(f, _) = val {
+                        return Value::Function(f, Some(Rc::new(v)));
+                    } 
                     return  val
                 }
                 
                 panic!("unknown attribute {}", attr)
             },
-            crate::parser::Member::FunctionCall(args) => {
-                println!("call args = {:?}  v = {:?}, expr = {:?}", args, v, expr);
-                Value::Null
+            crate::parser::Member::FunctionCall(mut rargs) => {
+                let mut args = Vec::with_capacity(rargs.len());
+                rargs.reverse();
+                for arg in rargs {
+                    args.push(self.eval(arg, ctx).unpack());
+                }
+                
+                if let Value::Function(f, bound) = v {
+                    if let Some(b) = bound {
+                        args.push((*b).clone());
+                        args.reverse()
+                    }
+                    return (f.overloads.first().unwrap().func)(args)
+                }
+
+                panic!("is not a func")
             },
             crate::parser::Member::Index(i) => {
                 let i = self.eval(*i, ctx).unpack();
