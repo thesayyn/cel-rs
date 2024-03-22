@@ -47,7 +47,7 @@ pub mod tests {
 
     use crate::{
         program,
-        value::{FnValue, Overload},
+        value::{Function, Overload},
         Value,
     };
 
@@ -87,7 +87,7 @@ pub mod tests {
 
     #[test]
     fn fn_test() {
-        let func = FnValue {
+        let func = Function {
             name: "calc",
             overloads: &[Overload {
                 key: "calc_string",
@@ -97,7 +97,7 @@ pub mod tests {
         let mut ctx = program::Context::default()
             .add_variable("a", Value::Int(10))
             .add_variable("b", Value::Int(10))
-            .add_variable("calc", crate::Value::Function(Rc::new(func), None));
+            .add_variable("calc", crate::Value::Function(func.into()));
         assert_eq!(eval_program!(r#"b.calc(a)"#, &mut ctx), Value::Int(20));
     }
 }

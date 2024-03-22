@@ -28,29 +28,25 @@ impl Eval {
                     return value.to_owned()
                 }
                 if let Some(val) = ctx.resolve(&attr) {
-                    if let Value::Function(f, _) = val {
-                        return Value::Function(f, Some(Rc::new(v)));
-                    } 
                     return  val
                 }
-                
                 panic!("unknown attribute {}", attr)
             },
-            crate::parser::Member::FunctionCall(mut rargs) => {
+            crate::parser::Member::FunctionCall(name, mut rargs) => {
                 let mut args = Vec::with_capacity(rargs.len());
                 rargs.reverse();
                 for arg in rargs {
                     args.push(self.eval(arg, ctx).unpack());
                 }
-                
-                if let Value::Function(f, bound) = v {
-                    if let Some(b) = bound {
-                        args.push((*b).clone());
-                        args.reverse()
+            
+                if let Some(val) = ctx.resolve(&name) {
+                    args.push(v.clone());
+                    args.reverse();
+                    if let Value::Function(f) = val {
+                        return (f.overloads.first().unwrap().func)(args)
                     }
-                    return (f.overloads.first().unwrap().func)(args)
                 }
-
+        
                 panic!("is not a func")
             },
             crate::parser::Member::Index(i) => {
@@ -125,6 +121,7 @@ impl Eval {
                 }
                 panic!("unknown attribute {}", &r)
             },
+            Expression::FunctionCall(_) => todo!(),
         }
     }
 }

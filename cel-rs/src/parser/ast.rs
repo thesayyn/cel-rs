@@ -40,6 +40,8 @@ pub enum Expression {
 
     Member(Box<Expression>, Box<Member>),
 
+    FunctionCall(Box<Member>),
+
     List(Vec<Expression>),
     Map(Vec<(Expression, Expression)>),
 
@@ -50,7 +52,7 @@ pub enum Expression {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Member {
     Attribute(Rc<String>),
-    FunctionCall(Vec<Expression>),
+    FunctionCall(Rc<String>, Vec<Expression>),
     Index(Box<Expression>),
     Fields(Vec<(Rc<String>, Expression)>),
 }

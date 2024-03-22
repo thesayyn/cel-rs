@@ -15,11 +15,11 @@ pub enum Value {
     String(Rc<String>),
     Map(Rc<OrderedHashMap<Value, Value>>),
     List(Rc<Vec<Value>>),
-    Function(Rc<FnValue>, Option<Rc<Value>>)
+    Function(Rc<Function>)
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub struct FnValue {
+pub struct Function {
     pub name: &'static str,
     pub overloads: &'static [Overload],
 }
@@ -44,7 +44,7 @@ impl Into<bool> for Value {
             Value::String(v) => v.len() > 0,
             Value::Map(v) => v.len() > 0,
             Value::List(v) => v.len() > 0,
-            Value::Function(_, _) => true,
+            Value::Function(v) => true,
         }
     }
 }
@@ -82,7 +82,7 @@ impl std::fmt::Display for Value {
             Value::String(v) => write!(f, "string({})", v),
             Value::Map(v) => write!(f, "map(len = {})", v.len()),
             Value::List(v) => write!(f, "list(len = {})", v.len()),
-            Value::Function(v, bound) => write!(f, "function(name = {}, bound = {:?})", v.name, bound),
+            Value::Function(v) => write!(f, "function(name = {})", v.name),
         }
     }
 }

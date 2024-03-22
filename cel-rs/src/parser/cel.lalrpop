@@ -25,8 +25,7 @@ pub Expression: Expression = {
 pub Member: Expression = {
     <left:Member> "." <identifier:Ident> => Expression::Member(left.into(), Member::Attribute(identifier.into()).into()).into(),
     <left:Member> "." <identifier:Ident> "(" <arguments:CommaSeparated<Expression>> ")" => {
-            let inner = Expression::Member(left.into(), Member::Attribute(identifier.into()).into()).into();
-            Expression::Member(inner, Member::FunctionCall(arguments).into()).into()
+        Expression::Member(left.into(), Member::FunctionCall(identifier.into(), arguments).into()).into()
     },
     <left:Member> "[" <expression:Expression> "]" => Expression::Member(left.into(), Member::Index(expression.into()).into()).into(),
     <left:Member> "{" <fields:CommaSeparated<FieldInits>> "}" => Expression::Member(left.into(), Member::Fields(fields.into()).into()).into(),
@@ -36,8 +35,7 @@ pub Member: Expression = {
 pub Primary: Expression = {
     "."? <Ident> => Expression::Ident(<>.into()).into(),
     "."? <identifier:Ident> "(" <arguments:CommaSeparated<Expression>> ")" => {
-            let inner = Expression::Ident(identifier.into()).into();
-            Expression::Member(inner, Member::FunctionCall(arguments).into()).into()
+            Expression::FunctionCall(Member::FunctionCall(identifier.into(), arguments).into()).into()
     },
     Atom => Expression::Atom(<>).into(),
     "[" <members:CommaSeparated<Expression>> "]" => Expression::List(<>).into(),
