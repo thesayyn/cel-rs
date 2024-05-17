@@ -1,5 +1,5 @@
 # CEL Rust
-[playground](https://thesayyn.github.io/cel-rust/)
+[playground](https://thesayyn.github.io/cel-rs/)
 
 # Requirements
 - NodeJS
