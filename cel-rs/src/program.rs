@@ -43,8 +43,6 @@ impl Program {
 
 #[cfg(test)]
 pub mod tests {
-    use std::rc::Rc;
-
     use crate::{
         program,
         value::{Function, Overload},

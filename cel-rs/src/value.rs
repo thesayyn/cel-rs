@@ -44,7 +44,7 @@ impl Into<bool> for Value {
             Value::String(v) => v.len() > 0,
             Value::Map(v) => v.len() > 0,
             Value::List(v) => v.len() > 0,
-            Value::Function(v) => true,
+            Value::Function(_v) => true,
         }
     }
 }

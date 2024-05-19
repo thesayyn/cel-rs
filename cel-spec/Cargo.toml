@@ -9,7 +9,10 @@ proc-macro = true
 [dependencies]
 prost = "0.12"
 prost-types = "0.12"
-prost-reflect = { version =  "0.13.0", features = ["text-format"]}
+prost-reflect = { version = "0.13.0", features = ["text-format"] }
+syn = { version = "2.0.55", features = ["parsing"] }
+static_init = "1.0.3"
+darling = "0.20.8"
 
 [build_dependencies]
 prost-build = "0.12.3"

@@ -1,34 +1,83 @@
+use std::io::Read;
 use proc_macro::TokenStream;
+use static_init::dynamic;
+use darling::{Error, FromMeta};
+use darling::ast::NestedMeta;
+use prost_reflect::{DescriptorPool, MessageDescriptor, DynamicMessage};
 
 const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/cel.bin"));
+#[dynamic] 
+static MESSAGE_DESCRIPTOR: MessageDescriptor = {
+    let pool = DescriptorPool::decode(BYTES.as_ref()).unwrap();
+    pool
+        .get_message_by_name("google.api.expr.test.v1.SimpleTestFile")
+        .unwrap()
+};
 
-fn get_expected_value(value: &prost_reflect::DynamicMessage) -> String {
-    let field = value.fields().next().unwrap();
+fn get_expected_value(value: &DynamicMessage) -> String {
+    let field = value.fields().next().expect("get expected value");
     let (m, v, c) = match field.0.name() {
-        "string_value" => ("String(std::rc::Rc::new(String::from(", format!(r##"r#"{}"#"##, field.1.as_str().unwrap()), ")))"),
+        "string_value" => (
+            "String(std::rc::Rc::new(String::from_utf8(",
+            format!("{:?}", field.1.as_str().unwrap().as_bytes().to_vec()),
+            ".to_vec()).unwrap()))",
+        ),
         "bool_value" => ("Bool(", format!("{}", field.1.as_bool().unwrap()), ")"),
         "int64_value" => ("Int(", format!("{}", field.1.as_i64().unwrap()), ")"),
         "uint64_value" => ("UInt(", format!("{}", field.1.as_u64().unwrap()), ")"),
-        "double_value" => ("Float(", format!("{}.into()", field.1.as_f64().unwrap()), ")"),
-        "map_value" => ("Map(", String::from("ordered_hash_map::OrderedHashMap::new().into()"), ")"),
-        "list_value" => ("List(", String::from("Vec::new().into()"), ")" ),
-        "bytes_value" => ("Bytes(std::rc::Rc::new(Vec::from(", format!("{:?}", field.1.as_bytes().unwrap().to_vec()), ")))"),
-        _ => ("Null", String::new(), "")
+        "double_value" => (
+            "Float(",
+            format!("({}).into()", field.1.as_f64().unwrap()),
+            ")",
+        ),
+        "map_value" => (
+            "Map(",
+            String::from("ordered_hash_map::OrderedHashMap::new().into()"),
+            ")",
+        ),
+        "list_value" => ("List(", String::from("Vec::new().into()"), ")"),
+        "bytes_value" => (
+            "Bytes(std::rc::Rc::new(Vec::from(",
+            format!("{:?}", field.1.as_bytes().unwrap().to_vec()),
+            ")))",
+        ),
+        _ => ("Null", String::new(), ""),
     };
     format!("cel_rs::value::Value::{}{}{}", m, v, c)
 }
 
-#[proc_macro]
-pub fn suite(attr: TokenStream) -> TokenStream {
-    println!("attr: \"{}\"", attr.to_string());
-    use prost_reflect::{DescriptorPool, DynamicMessage};
+#[derive(Debug, FromMeta)]
+struct MacroArgs {
+    name: String,
+    #[darling(multiple, rename = "include")]
+    includes: Vec<String>,
+}
 
-    let pool = DescriptorPool::decode(BYTES.as_ref()).unwrap();
-    let message_descriptor = pool
-        .get_message_by_name("google.api.expr.test.v1.SimpleTestFile")
-        .unwrap();
-    let bytes = include_str!("../cel-spec/tests/simple/testdata/basic.textproto");
-    let suite = DynamicMessage::parse_text_format(message_descriptor, &bytes).unwrap();
+
+#[proc_macro]
+pub fn suite(rargs: TokenStream) -> TokenStream {
+
+    let attr_args = match NestedMeta::parse_meta_list(rargs.into()) {
+        Ok(v) => v,
+        Err(e) => { return TokenStream::from(Error::from(e).write_errors()); }
+    };
+
+    let args = match MacroArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => { return TokenStream::from(e.write_errors()); }
+    };
+
+    let mut file = std::fs::File::open(format!(
+        "{}/cel-spec/tests/simple/testdata/{}.textproto",
+        env!("CARGO_MANIFEST_DIR"),
+        args.name
+    ))
+    .expect("could not find the suite");
+
+    let mut content = String::new();
+    file.read_to_string(&mut content)
+        .expect("can not read the suite file");
+    let suite = DynamicMessage::parse_text_format(MESSAGE_DESCRIPTOR.to_owned(), &content).unwrap();
 
     let mut ast = String::new();
     for section in suite
@@ -39,30 +88,37 @@ pub fn suite(attr: TokenStream) -> TokenStream {
     {
         let section = section.as_message().unwrap();
         let sname = section.get_field_by_name("name").unwrap();
+        let sname = sname.as_str().unwrap();
+        let includes = &args.includes;
+        if includes.into_iter().find(|p| p.as_str() == sname).is_none(){
+            println!("skip {}", &sname);
+            continue;
+        }
 
-        ast.push_str(format!("pub mod {}{{", sname.as_str().unwrap()).as_str());
+        ast.push_str(format!("pub mod {}{{", sname).as_str());
 
         for case in section
             .get_field_by_name("test")
-            .unwrap()
+            .expect("test")
             .as_list()
-            .unwrap()
+            .expect("test as list")
         {
-            let case = case.as_message().unwrap();
-            let name = case.get_field_by_name("name").unwrap();
-            let expr = case.get_field_by_name("expr").unwrap();
-            let value = case.get_field_by_name("value").unwrap();
+            let case = case.as_message().expect("message as case");
+            let name = case.get_field_by_name("name").expect("expected name");
+            let expr = case.get_field_by_name("expr").expect("expected expr");
+            let value = case.get_field_by_name("value").expect("expected value");
 
-            let name = name.as_str().unwrap();
-            let expr = expr.as_str().unwrap();
-            let value = value.as_message().unwrap();
+            let name = name.as_str().expect("name as str");
+            let expr = expr.as_str().expect("expr as str");
+            let value = value.as_message().expect("value as message");
             let expected_value = get_expected_value(value);
 
             ast.push_str(&format!(r##"
                 #[test]
                 fn {name}() {{
-                    let program = cel_rs::Program::new(r#"{expr}"#);
-                    assert!(program.is_ok(), "failed to parse '{{}}'", r#"{expr}"#);
+                    let expr = r#"{expr}"#;
+                    let program = cel_rs::Program::new(expr);
+                    assert!(program.is_ok(), "failed to parse '{{}}'", expr);
                     let program = program.unwrap();
                     let mut ctx = cel_rs::context::Context::default();
                     let value = program.eval(&mut ctx);
@@ -73,8 +129,7 @@ pub fn suite(attr: TokenStream) -> TokenStream {
         }
 
         ast.push_str("}");
-        break;
     }
-    //println!("{}", ast);
+    println!("{}", ast);
     ast.parse().unwrap()
 }
