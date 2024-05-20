@@ -11,12 +11,12 @@ readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ordered-float = "4.2.0"
 ordered_hash_map = "0.4.0"
 regex = "1.4.2"
 lalrpop-util = "0.19.1"
+lazy_static = "1.4.0"
 
-[dev_dependencies]
+[dev-dependencies]
 cel-spec = {path = "../cel-spec"}
 
 [build-dependencies]

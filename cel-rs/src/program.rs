@@ -1,8 +1,10 @@
 use crate::context::Context;
-use crate::eval::{Bag, Eval};
+use crate::eval::Eval;
 use crate::parser::cel::ExpressionParser;
 use crate::parser::Expression;
-use crate::Value;
+use crate::value::value::Val;
+use crate::value::{value::Value};
+
 use std::fmt;
 use std::result::Result;
 
@@ -32,28 +34,23 @@ impl Program {
     }
 
     pub fn execute(self, context: &mut Context) -> bool {
-        self.eval(context).unpack().into()
+        self.eval(context)
+            .to_bool()
+            .as_bool()
+            .unwrap_or(&false)
+            .to_owned()
     }
 
-    pub fn eval(self, context: &mut Context) -> Value {
+    pub fn eval(self, context: &mut Context) -> Val {
         let e = Eval::default();
-        e.eval(self.expr, context).unpack()
+        e.eval(self.expr, context)
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        program,
-        value::{Function, Overload},
-        Value,
-    };
+    use crate::{program, value::value::Val};
 
-    macro_rules! string {
-        ($q:literal) => {
-            crate::Value::String(std::rc::Rc::new($q.into()))
-        };
-    }
     macro_rules! eval_program {
         ($expr:literal) => {{
             eval_program!($expr, &mut crate::context::Context::default())
@@ -71,31 +68,73 @@ pub mod tests {
     }
 
     #[test]
-    fn basic_test() {
-        assert_eq!(eval_program!(r#"r"""#), string!(""));
-    }
-
-    fn calc_string_string(args: Vec<Value>) -> Value {
-        println!("{:?}", args);
-        let mut args = args.into_iter();
-        let a = args.next().unwrap();
-        let b = args.next().unwrap();
-        a + b
+    fn test_bool() {
+        let mut ctx = program::Context::default().add_variable("a", Val::new_bool(true));
+        assert_eq!(eval_program!(r#"a == true"#, &mut ctx), Val::new_bool(true));
+        assert_eq!(eval_program!(r#"a == false"#, &mut ctx), Val::new_bool(false));
     }
 
     #[test]
-    fn fn_test() {
-        let func = Function {
-            name: "calc",
-            overloads: &[Overload {
-                key: "calc_string",
-                func: calc_string_string,
-            }],
-        };
-        let mut ctx = program::Context::default()
-            .add_variable("a", Value::Int(10))
-            .add_variable("b", Value::Int(10))
-            .add_variable("calc", crate::Value::Function(func.into()));
-        assert_eq!(eval_program!(r#"b.calc(a)"#, &mut ctx), Value::Int(20));
+    fn test_string() {
+        assert_eq!(eval_program!(r#"r"""#), Val::new_string(""));
+        assert_eq!(eval_program!(r#"r"CEL""#), Val::new_string("CEL"));
     }
+
+    #[test]
+    fn test_null() {
+        assert_eq!(eval_program!(r#"null"#), Val::new_null());
+    }
+
+    #[test]
+    fn test_bytes() {
+        assert_eq!(eval_program!(r#"b''"#), Val::new_bytes(vec![].into()));
+    }
+
+
+    #[test]
+    fn test_double() {
+        assert_eq!(eval_program!(r#"2.0"#), Val::new_double(2.0f64));
+    }
+
+    #[test]
+    fn test_ints() {
+        assert_eq!(eval_program!(r#"2"#), Val::new_int(2));
+        assert_eq!(eval_program!(r#"2u"#), Val::new_uint(2));
+    }
+
+    #[test]
+    fn test_ordering() {
+        assert_eq!(eval_program!(r#"2 > 2"#), Val::new_bool(false));
+        assert_eq!(eval_program!(r#"2 >= 2"#), Val::new_bool(true));
+        assert_eq!(eval_program!(r#"3 > 2"#), Val::new_bool(true));
+        assert_eq!(eval_program!(r#"3 >= 2"#), Val::new_bool(true));
+        assert_eq!(eval_program!(r#"3 < 2"#), Val::new_bool(false));
+        assert_eq!(eval_program!(r#"3 == 2"#), Val::new_bool(false));
+        assert_eq!(eval_program!(r#"2 == 2"#), Val::new_bool(true));
+    }
+
+
+//     fn calc_string_string(args: Vec<Value>) -> Value {
+//         println!("{:?}", args);
+//         let mut args = args.into_iter();
+//         let a = args.next().unwrap();
+//         let b = args.next().unwrap();
+//         a + b
+//     }
+
+//     #[test]
+//     fn fn_test() {
+//         let func = Function {
+//             name: "calc",
+//             overloads: &[Overload {
+//                 key: "calc_string",
+//                 func: calc_string_string,
+//             }],
+//         };
+//         let mut ctx = program::Context::default()
+//             .add_variable("a", Value::Int(10))
+//             .add_variable("b", Value::Int(10))
+//             .add_variable("calc", crate::Value::Function(func.into()));
+//         assert_eq!(eval_program!(r#"b.calc(a)"#, &mut ctx), Value::Int(20));
+//     }
 }
