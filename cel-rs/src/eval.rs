@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use crate::parser::{Atom, Expression, RelationOp};
-use crate::value::value::{Val};
+use crate::value::value::Val;
 use crate::Context;
 
 #[derive(Default)]
@@ -47,24 +50,7 @@ impl Eval {
     //         crate::parser::Member::Fields(_) => todo!("Fields"),
     //     }
     // }
-    // fn eval_map(&self, entries: Vec<(Expression, Expression)>, ctx: &mut Context) -> Value {
-    //     let mut map = OrderedHashMap::with_capacity(entries.len());
-    //     for (kexpr, vexpr) in entries {
-    //         let k = self.eval(kexpr, ctx).unpack();
-    //         let v = self.eval(vexpr, ctx).unpack();
-    //         map.insert(k, v);
-    //     }
-    //     Value::Map(Rc::new(map))
-    // }
 
-    // fn eval_list(&self, elems: Vec<Expression>, ctx: &mut Context) -> Value {
-    //     let mut list = Vec::with_capacity(elems.len());
-    //     for expr in elems {
-    //         let v = self.eval(expr, ctx).unpack();
-    //         list.push(v);
-    //     }
-    //     Value::List(Rc::new(list))
-    // }
 
     pub fn eval(&self, expr: Expression, ctx: &mut Context) -> Val {
         match expr {
@@ -88,14 +74,34 @@ impl Eval {
             Expression::Unary(_, _) => todo!(),
             Expression::Member(_, _) => todo!(),
             Expression::FunctionCall(_) => todo!(),
-            Expression::List(_) => todo!(),
-            Expression::Map(_) => todo!(),
+            Expression::List(values) => self.eval_list(values, ctx),
+            Expression::Map(entries) => self.eval_map(entries, ctx),
             Expression::Atom(atom) => self.eval_atom(atom, ctx),
             Expression::Ident(ident) => ctx
                 .resolve(&ident)
                 .unwrap_or(&Val::new_error(format!("unknown variable {}", ident)))
                 .to_owned(),
         }
+    }
+
+    fn eval_map(&self, entries: Vec<(Expression, Expression)>, ctx: &mut Context) -> Val {
+        let mut map = HashMap::with_capacity(entries.len());
+        for (kexpr, vexpr) in entries {
+            let k = self.eval(kexpr, ctx);
+            let v = self.eval(vexpr, ctx);
+            map.insert(k, v);
+        }
+        Val::new_map(Rc::new(map))
+    }
+
+
+    fn eval_list(&self, elems: Vec<Expression>, ctx: &mut Context) -> Val {
+        let mut list = Vec::with_capacity(elems.len());
+        for expr in elems {
+            let v = self.eval(expr, ctx);
+            list.push(v);
+        }
+        Val::new_list(Rc::new(list))
     }
 
     pub fn eval_atom(&self, atom: Atom, ctx: &mut Context) -> Val {

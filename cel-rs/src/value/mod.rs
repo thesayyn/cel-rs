@@ -12,3 +12,4 @@ pub mod bytes;
 pub mod double;
 pub mod uint;
 pub mod int;
+pub mod map;

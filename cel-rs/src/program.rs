@@ -113,6 +113,18 @@ pub mod tests {
         assert_eq!(eval_program!(r#"2 == 2"#), Val::new_bool(true));
     }
 
+    #[test]
+    fn self_eval_int_hex_negative() {
+        let expr = r#"-0x55555555"#;
+        let program = crate::Program::new(expr);
+        assert!(program.is_ok(), "failed to parse '{}'", expr);
+        let program = program.unwrap();
+        let mut ctx = crate::Context::default();
+        let value = program.eval(&mut ctx);
+        let expected_value = crate::Val::new_int(-1431655765);
+        assert_eq!(value, expected_value, r#""{:?}" did not match "{:?}""#, value, expected_value);
+    }
+
 
 //     fn calc_string_string(args: Vec<Value>) -> Value {
 //         println!("{:?}", args);

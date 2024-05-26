@@ -32,12 +32,13 @@ impl Value for Bool {
     }
 
     fn compare(&self, other: &Val) -> Option<Val> {
-        other.as_bool().map(|ob| {
-            (&self.0).cmp(ob).into()
-        })
+        other.as_bool().map(|ob| (&self.0).cmp(ob).into())
     }
 
-    fn equals(&self, other: &Val) -> Option<Val> {
-        other.as_bool().map(|f| Val::new_bool(&self.0 == f))
+    fn equals(&self, other: &Val) -> Val {
+        other
+            .as_bool()
+            .map(|f| Val::new_bool(&self.0 == f))
+            .unwrap_or(Val::new_bool(false))
     }
 }

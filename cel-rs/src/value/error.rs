@@ -1,9 +1,17 @@
+use core::fmt;
+
 use super::{value::{Value, Val}, ty::Ty};
 
 #[derive(Eq, PartialEq)]
 pub struct Error {
     id: Option<i64>,
     error: String,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "error(id = {:?}, message = {})", self.id, self.error)
+    }
 }
 
 impl Error {

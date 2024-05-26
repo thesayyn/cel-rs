@@ -13,6 +13,9 @@ prost-reflect = { version = "0.13.0", features = ["text-format"] }
 syn = { version = "2.0.55", features = ["parsing"] }
 static_init = "1.0.3"
 darling = "0.20.8"
+lazy_static = "1.4.0"
 
-[build_dependencies]
+[build-dependencies]
 prost-build = "0.12.3"
+protoc = "2.28.0"
+protoc-prebuilt = "0.3.0"
