@@ -53,13 +53,7 @@ impl Eq for Val {}
 
 impl PartialEq for Val {
     fn eq(&self, other: &Self) -> bool {
-        // TODO: switch other types to use equals instead.
-        if self.ty() == Ty::Map  {
-            eprintln!("equals map");
-            return self.equals(other).as_bool().expect("equals did not return bool").to_owned();
-        }
-        self.partial_cmp(other)
-            .is_some_and(|ord| ord == cmp::Ordering::Equal)
+        return self.equals(other).as_bool().expect("equals did not return bool").to_owned();
     }
 }
 

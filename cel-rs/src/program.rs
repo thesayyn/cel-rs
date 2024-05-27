@@ -69,7 +69,8 @@ pub mod tests {
 
     #[test]
     fn test_bool() {
-        let mut ctx = program::Context::default().add_variable("a", Val::new_bool(true));
+        let mut ctx = program::Context::default();
+        ctx.add_variable("a", Val::new_bool(true));
         assert_eq!(eval_program!(r#"a == true"#, &mut ctx), Val::new_bool(true));
         assert_eq!(eval_program!(r#"a == false"#, &mut ctx), Val::new_bool(false));
     }

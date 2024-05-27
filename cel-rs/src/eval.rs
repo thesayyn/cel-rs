@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::parser::{Atom, Expression, RelationOp};
+use crate::parser::{Atom, Expression, Member, RelationOp};
 use crate::value::value::Val;
 use crate::Context;
 
@@ -9,51 +9,45 @@ use crate::Context;
 pub struct Eval {}
 
 impl Eval {
-    // fn eval_member(&self, expr: Expression, member: Member, ctx: &mut Context) -> impl Bag {
-    //     let v = self.eval(expr, ctx).unpack();
-    //     match member {
-    //         crate::parser::Member::Attribute(attr) => {
-    //             if let Value::Map(v) = v {
-    //                 let value = v.get(&Value::String(attr)).expect("TODO: unknown map key");
-    //                 return value.to_owned()
-    //             }
-    //             if let Some(val) = ctx.resolve(&attr) {
-    //                 return  val
-    //             }
-    //             panic!("unknown attribute {}", attr)
-    //         },
-    //         crate::parser::Member::FunctionCall(name, mut rargs) => {
-    //             let mut args = Vec::with_capacity(rargs.len());
-    //             rargs.reverse();
-    //             for arg in rargs {
-    //                 args.push(self.eval(arg, ctx).unpack());
-    //             }
+    fn eval_function(
+        &self,
+        name: Rc<String>,
+        receiver: Option<Val>,
+        argexprs: Vec<Expression>,
+        ctx: &mut Context,
+    ) -> Val {
+        let mut args = Vec::with_capacity(argexprs.len() + 1);
 
-    //             if let Some(val) = ctx.resolve(&name) {
-    //                 args.push(v.clone());
-    //                 args.reverse();
-    //                 if let Value::Function(f) = val {
-    //                     return (f.overloads.first().unwrap().func)(args)
-    //                 }
-    //             }
+        if let Some(expr) = receiver {
+            args.push(expr)
+        }
 
-    //             panic!("is not a func")
-    //         },
-    //         crate::parser::Member::Index(i) => {
-    //             let i = self.eval(*i, ctx).unpack();
-    //             if let Value::Map(v) = v {
-    //                 let value = v.get(&i).expect("TODO: unknown map key");
-    //                 return value.to_owned()
-    //             }
-    //             Value::Null
-    //         },
-    //         crate::parser::Member::Fields(_) => todo!("Fields"),
-    //     }
-    // }
+        for expr in argexprs {
+            args.push(self.eval(expr, ctx));
+        }
 
+        if let Some(func) = ctx.resolve_function(&name) {
+            return (func.overloads.first().unwrap().func)(args)
+        }
+        Val::new_error("unknown func".to_string())
+    }
+    fn eval_member(&self, expr: Box<Expression>, member: Box<Member>, ctx: &mut Context) -> Val {
+        let v = self.eval(*expr, ctx);
+        match *member {
+            crate::parser::Member::Attribute(attr) => todo!(),
+            crate::parser::Member::FunctionCall(name, argexprs) => {
+                self.eval_function(name, Some(v), argexprs, ctx)
+            }
+            crate::parser::Member::Index(i) => todo!(),
+            crate::parser::Member::Fields(_) => todo!(),
+        }
+    }
 
     pub fn eval(&self, expr: Expression, ctx: &mut Context) -> Val {
         match expr {
+            Expression::GlobalFunctionCall(name, argexprs) => {
+                self.eval_function(name, None, argexprs, ctx)
+            }
             Expression::Arithmetic(_, _, _) => todo!(),
             Expression::Relation(left, op, right) => {
                 let l = self.eval(*left, ctx);
@@ -72,13 +66,12 @@ impl Eval {
             Expression::Or(_, _) => todo!(),
             Expression::And(_, _) => todo!(),
             Expression::Unary(_, _) => todo!(),
-            Expression::Member(_, _) => todo!(),
-            Expression::FunctionCall(_) => todo!(),
+            Expression::Member(expr, member) => self.eval_member(expr, member, ctx),
             Expression::List(values) => self.eval_list(values, ctx),
             Expression::Map(entries) => self.eval_map(entries, ctx),
             Expression::Atom(atom) => self.eval_atom(atom, ctx),
             Expression::Ident(ident) => ctx
-                .resolve(&ident)
+                .resolve_variable(&ident)
                 .unwrap_or(&Val::new_error(format!("unknown variable {}", ident)))
                 .to_owned(),
         }
@@ -93,7 +86,6 @@ impl Eval {
         }
         Val::new_map(Rc::new(map))
     }
-
 
     fn eval_list(&self, elems: Vec<Expression>, ctx: &mut Context) -> Val {
         let mut list = Vec::with_capacity(elems.len());

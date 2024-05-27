@@ -1,3 +1,5 @@
+use crate::Val;
+
 use super::value::Value;
 
 // https://github.com/google/cel-spec/blob/master/doc/langdef.md#values
@@ -47,5 +49,14 @@ impl Value for Ty {
     
     fn native_value(&self) -> &dyn std::any::Any {
        self
+    }
+
+    fn equals(&self, other: &Val) -> Val {
+        Val::new_bool(
+            other
+                .native_value()
+                .downcast_ref::<Self>()
+                .is_some_and(|f| f.eq(&self)),
+        )
     }
 }

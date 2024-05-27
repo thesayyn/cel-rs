@@ -40,7 +40,7 @@ pub enum Expression {
 
     Member(Box<Expression>, Box<Member>),
 
-    FunctionCall(Box<Member>),
+    GlobalFunctionCall(Rc<String>, Vec<Expression>),
 
     List(Vec<Expression>),
     Map(Vec<(Expression, Expression)>),

@@ -1,6 +1,9 @@
 use core::fmt;
 
-use super::{value::{Value, Val}, ty::Ty};
+use super::{
+    ty::Ty,
+    value::{Val, Value},
+};
 
 #[derive(Eq, PartialEq)]
 pub struct Error {
@@ -34,8 +37,22 @@ impl Value for Error {
     fn ty(&self) -> Ty {
         Ty::Error
     }
-    
+
     fn native_value(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn equals(&self, other: &Val) -> Val {
+        if other.ty() != Ty::Error {
+            return Val::new_bool(false);
+        }
+
+        Val::new_bool(
+            other
+            .native_value()
+            .downcast_ref::<Self>()
+            .map(|oerr| oerr.eq(self))
+            .is_some_and(|f| f)
+        )
     }
 }

@@ -19,6 +19,15 @@ impl Value for Bytes {
         &self.0
     }
 
+    fn equals(&self, other: &Val) -> Val {
+        Val::new_bool(
+            other
+                .native_value()
+                .downcast_ref::<Rc<Vec<u8>>>()
+                .is_some_and(|f| f.eq(&self.0)),
+        )
+    }
+
     fn compare(&self, other: &Val) -> Option<Val> {
         other.native_value().downcast_ref::<Rc<Vec<u8>>>().map(|ob| {
             (&self.0).cmp(ob).into()

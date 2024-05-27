@@ -22,6 +22,11 @@ impl Value for Null {
     fn native_value(&self) -> &dyn std::any::Any {
       &()
     }
+
+    fn equals(&self, other: &Val) -> Val {
+        Val::new_bool(other.ty() == Ty::Null)
+    }
+
     fn compare(&self, other: &Val) -> Option<Val> {
         if other.ty() == Ty::Null {
             return Some(Val::from(Ordering::Equal))

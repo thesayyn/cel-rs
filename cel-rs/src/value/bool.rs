@@ -36,9 +36,11 @@ impl Value for Bool {
     }
 
     fn equals(&self, other: &Val) -> Val {
-        other
-            .as_bool()
-            .map(|f| Val::new_bool(&self.0 == f))
-            .unwrap_or(Val::new_bool(false))
+        Val::new_bool(
+            other
+                .native_value()
+                .downcast_ref::<bool>()
+                .is_some_and(|f| f.eq(&self.0)),
+        )
     }
 }

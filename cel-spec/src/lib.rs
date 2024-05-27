@@ -21,26 +21,34 @@ include!(concat!(env!("OUT_DIR"), "/tests.rs"));
 use darling::ast::NestedMeta;
 use darling::{Error, FromMeta};
 use google::api::expr::test::v1::{simple_test::ResultMatcher, SimpleTestFile};
-use google::api::expr::v1alpha1::value::Kind;
-use google::api::expr::v1alpha1::Value;
+use google::api::expr::v1alpha1::{Value, value};
+use google::api::expr::v1alpha1::{ExprValue, expr_value};
 use proc_macro::TokenStream;
 use prost::Message;
 
+fn expand_expr_value(val: ExprValue) -> String {
+    match val.kind.unwrap() {
+        expr_value::Kind::Value(val) => expand_value(val),
+        expr_value::Kind::Error(_) => String::from("TODO: ExprValue::Error"),
+        expr_value::Kind::Unknown(_) =>  String::from("TODO: ExprValue::Unknown"),
+    }
+}
+
 fn expand_value(val: Value) -> String {
     match val.kind.unwrap() {
-        Kind::NullValue(_) => "cel_rs::Val::new_null()".to_string(),
-        Kind::BoolValue(b) => format!("cel_rs::Val::new_bool({})", b),
-        Kind::Int64Value(i) => format!("cel_rs::Val::new_int({})", i),
-        Kind::Uint64Value(ui) => format!("cel_rs::Val::new_uint({})", ui),
-        Kind::DoubleValue(db) => format!("cel_rs::Val::new_double({}f64)", db),
-        Kind::StringValue(str) => format!(
+        value::Kind::NullValue(_) => "cel_rs::Val::new_null()".to_string(),
+        value::Kind::BoolValue(b) => format!("cel_rs::Val::new_bool({})", b),
+        value::Kind::Int64Value(i) => format!("cel_rs::Val::new_int({})", i),
+        value::Kind::Uint64Value(ui) => format!("cel_rs::Val::new_uint({})", ui),
+        value::Kind::DoubleValue(db) => format!("cel_rs::Val::new_double({}f64)", db),
+        value::Kind::StringValue(str) => format!(
             "cel_rs::Val::new_string(std::rc::Rc::new(String::from_utf8({:?}.to_vec()).unwrap()))",
             str.as_bytes()
         ),
-        Kind::BytesValue(bytes) => {
+        value::Kind::BytesValue(bytes) => {
             format!("cel_rs::Val::new_bytes(Vec::from({:?}).into())", bytes)
         }
-        Kind::MapValue(map) => format!(
+        value::Kind::MapValue(map) => format!(
             "cel_rs::Val::new_map(std::collections::HashMap::<cel_rs::Val, cel_rs::Val>::from([{}]).into())",
             map.entries.iter().map(|entry| {
                let key =  entry.key.clone().unwrap();
@@ -49,10 +57,10 @@ fn expand_value(val: Value) -> String {
                format!("({}, {}),", expand_value(key), expand_value(value))
             }).collect::<Vec<String>>().join("\n")
         ),
-        Kind::ListValue(list) => format!("cel_rs::Val::new_list({})", "Vec::new().into()"),
-        Kind::EnumValue(en) => "TODO".to_string(),
-        Kind::ObjectValue(obj) => "TODO".to_string(),
-        Kind::TypeValue(ty) => "TODO".to_string(),
+        value::Kind::ListValue(list) => format!("cel_rs::Val::new_list({})", "Vec::new().into()"),
+        value::Kind::EnumValue(en) => "TODO: EnumValue".to_string(),
+        value::Kind::ObjectValue(obj) => "TODO: ObjectValue".to_string(),
+        value::Kind::TypeValue(ty) => "TODO: TypeValue".to_string(),
     }
 }
 
@@ -60,11 +68,31 @@ fn expand_result_matcher(rm: Option<ResultMatcher>) -> String {
     if rm.is_none() {
         panic!("result matcher is none.");
     }
-    if let ResultMatcher::Value(val) = rm.unwrap() {
-        expand_value(val)
-    } else {
-        String::from("TODO")
+
+    match rm.unwrap() {
+        ResultMatcher::Value(val) => expand_value(val),
+        ResultMatcher::EvalError(err) => format!("cel_rs::Val::new_error({:?}.into())", err.errors[0].message),
+        ResultMatcher::AnyEvalErrors(eval) => format!("TODO: AnyEvalErrors: {:#?}", eval),
+        ResultMatcher::Unknown(unk) => format!("TODO: Unknown: {:#?}", unk),
+        ResultMatcher::AnyUnknowns(anyunk) => format!("TODO: AnyUnknowns: {:#?}", anyunk),
     }
+}
+
+fn expand_bindings(bindings: HashMap<String, ExprValue>) -> String {
+    let mut exp = String::new();
+
+    for (k, v) in bindings.iter() {
+        exp.push_str(
+            format!(
+                r#"ctx.add_variable("{k}", {v});"#,
+                k = k,
+                v = expand_expr_value(v.clone())
+            )
+            .as_str(),
+        )
+    }
+
+    exp
 }
 
 #[derive(Debug, FromMeta)]
@@ -98,8 +126,7 @@ pub fn suite(rargs: TokenStream) -> TokenStream {
 
     let mut ast = String::new();
     for section in testfile.section {
-
-        if args.skip_sections.contains(&section.name){
+        if args.skip_sections.contains(&section.name) {
             continue;
         }
 
@@ -108,13 +135,17 @@ pub fn suite(rargs: TokenStream) -> TokenStream {
         ast.push_str("{");
 
         for test in section.test {
-            if args.skip_tests.contains(&test.name){
+            if args.skip_tests.contains(&test.name) {
                 continue;
             }
 
             let expected_value = expand_result_matcher(test.result_matcher);
 
-            ast.push_str(&format!(r##"
+            let bindings = expand_bindings(test.bindings);
+
+            ast.push_str(
+                &format!(
+                    r##"
                 #[test]
                 fn r#{name}() {{
                     let expr = r#"{expr}"#;
@@ -122,11 +153,19 @@ pub fn suite(rargs: TokenStream) -> TokenStream {
                     assert!(program.is_ok(), "failed to parse '{{}}'", expr);
                     let program = program.unwrap();
                     let mut ctx = cel_rs::Context::default();
+                    {bindings}
                     let value = program.eval(&mut ctx);
                     let expected_value = {expected_value};
                     assert_eq!(value, expected_value);
                 }}
-            "##, name = test.name, expr = test.expr, expected_value = expected_value ).to_string());
+            "##,
+                    name = test.name,
+                    expr = test.expr,
+                    expected_value = expected_value,
+                    bindings = bindings
+                )
+                .to_string(),
+            );
         }
 
         ast.push_str("}");

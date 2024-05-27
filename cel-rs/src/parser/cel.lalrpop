@@ -36,7 +36,7 @@ pub Member: Expression = {
 pub Primary: Expression = {
     "."? <Ident> => Expression::Ident(<>.into()).into(),
     "."? <identifier:Ident> "(" <arguments:CommaSeparated<Expression>> ")" => {
-            Expression::FunctionCall(Member::FunctionCall(identifier.into(), arguments).into()).into()
+        Expression::GlobalFunctionCall(identifier.into(), arguments)
     },
     Atom => Expression::Atom(<>).into(),
     "[" <members:CommaSeparated<Expression>> "]" => Expression::List(<>).into(),

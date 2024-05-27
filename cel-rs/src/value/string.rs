@@ -20,6 +20,14 @@ impl Value for String {
         &self.0
     }
 
+    fn equals(&self, other: &Val) -> Val {
+        Val::new_bool(
+            other
+                .native_value()
+                .downcast_ref::<StdString>()
+                .is_some_and(|f| f.eq(&self.0)),
+        )
+    }
     fn compare(&self, other: &Val) -> Option<Val> {
         other.native_value().downcast_ref::<StdString>().map(|oths| {
             Val::from((&self.0).cmp(oths))

@@ -18,6 +18,15 @@ impl Value for Double {
         &self.0
     }
 
+    fn equals(&self, other: &Val) -> Val {
+        Val::new_bool(
+            other
+                .native_value()
+                .downcast_ref::<f64>()
+                .is_some_and(|f| f.eq(&self.0)),
+        )
+    }
+    
     fn compare(&self, other: &Val) -> Option<Val> {
         let vl = other.native_value().downcast_ref::<f64>();
         if vl.is_some() {
